@@ -1,90 +1,184 @@
-# vue-admin-template
+## 太长不看
+我把多项目集成模板上传到了github [vue-multi-admins-template](https://github.com/Skura23/vue-multi-admins-template), 使用方法在到文章最后
 
-English | [简体中文](./README-zh.md)
+## 需求
+vue多个项目开发时, 存在项目内资源共用的问题, 解决方案一般有两个,
+1, 每个项目独立开发, 公用资源通过npm打包发布到私人或公用npm服务器, 使用时引用这些npm包
+2, 多个项目集成到一个根项目里, 每个子项目可单独运行打包, 也可直接运行打包由子项目集成的根项目
+本文介绍方案2
+## 说明
+为适用公司业务, 项目基于[vue-admin-template](https://github.com/PanJiaChen/vue-admin-template)集成, 基于其他项目的话原理是一样的
 
-> A minimal vue admin template with Element UI & axios & iconfont & permission control & lint
+## 项目结构
+![红框从上到下](https://img-blog.csdnimg.cn/55fe82d78a1d498180fb636e58304d9d.png)
+(红框从上到下依次为子项目文件, 公共资源区, 根项目配置区)
+ `/apps`文件夹存放子项目, 子项目内结构与根项目`src`文件夹内结构相同, 实际配置的时候可直接复制根项目`src`文件夹内容到子项目内
+## 搭建流程
+**1,  本地安装运行vue-admin-template**
+git clone https://github.com/PanJiaChen/vue-admin-template.git
+cd vue-admin-template
+npm install
+npm run dev
 
-**Live demo:** http://panjiachen.github.io/vue-admin-template
+**2, 创建子项目**
+直接复制根项目`src`文件夹内容到子项目内, 再在子项目目录内添加`index.html`和`test-app.html`, 两文件内容相同, 内容可直接从`public/index.html`里复制, 前者是单个子项目运行打包时的页面入口, 后者是根项目运行打包时的页面入口
 
+**3, 根目录下添加 /projects.js**
 
-**The current version is `v4.0+` build on `vue-cli`. If you want to use the old version , you can switch branch to [tag/3.11.0](https://github.com/PanJiaChen/vue-admin-template/tree/tag/3.11.0), it does not rely on `vue-cli`**
+```javascript
+let path = require('path')
+let glob = require('glob')
+//配置pages多页面获取当前文件夹下的html和js
+function getEntry(globPath) {
+  let entries = {},
+    basename, tmp, pathname;
 
-## Build Setup
+  glob.sync(globPath).forEach(function(entry) {
+    basename = path.basename(entry, path.extname(entry));
+    tmp = entry.split('/').splice(-3);
+    pathname = basename; // 正确输出js和html的路径
+
+    entries[pathname] = {
+      entry: 'src/' + tmp[0] + '/' + tmp[1] + '/main.js',
+      template: 'src/' + tmp[0] + '/' + tmp[1] + '/' + tmp[2],
+      title:  tmp[2],
+      filename: tmp[2] //如test-app.html, 为根项目不同页面配置信息
+    };
+  });
+  return entries;
+}
+let pages = getEntry('./src/apps/**?/*.html');
+pages['index'] = {
+  // pages 的入口
+  entry: 'src/main.js',
+  // 模板来源
+  template: 'public/index.html',
+  // 在 dist/index.html 的输出
+  filename: 'index.html',
+  // 当使用 title 选项时，
+  // template 中的 title 标签需要是 <title><%= htmlWebpackPlugin.options.title %></title>
+  title: '公共首页',
+  // 在这个页面中包含的块，默认情况下会包含
+  // 提取出来的通用 chunk 和 vendor chunk。
+  // chunks: ['chunk-vendors', 'chunk-common', 'index']
+  // 必须, 否则打包时页面空白, 参考: https://blog.csdn.net/weixin_43405848/article/details/120371626
+  chunks: ['chunk-libs', 'chunk-vendors','chunk-commons', 'chunk-elementUI', 'index', 'runtime', 'manifest']
+};
+
+const config = {
+  all: {
+    pages
+  },
+  'test-app': {
+    pages: {
+      index: {
+        entry: "src/apps/test-app/main.js",
+        template: "src/apps/test-app/index.html",
+        filename: "index.html",
+         // 必须, 否则打包时页面空白, 参考: https://blog.csdn.net/weixin_43405848/article/details/120371626
+        chunks: ['chunk-libs', 'chunk-vendors','chunk-commons', 'chunk-elementUI', 'index', 'runtime', 'manifest']
+      }
+    },
+    outputDir: "dist/test-app/"
+  },
+  // 新子项目在这里配置
+  'test-app1': {},
+  'test-app2': {},
+  
+};
+
+module.exports = config;
+```
+**4, 修改 /vue.config.js**
+
+```javascript
+const projectsConfig = require("./projects.js");
+/*
+	npm run serve 就是all,否则是后接子系统名称
+*/
+let projectName = (!process.env.VUE_APP_PROJECT_NAME || process.env.VUE_APP_PROJECT_NAME.length === 0)
+ ? 'all' : process.env.VUE_APP_PROJECT_NAME;
+ 
+module.exports = {
+  // 注意, 需注释掉config.plugin('preload')配置项, 否则运行会报错
+  // 注意, 此句要放在outputDir: 'dist'配置项后面以将其覆盖, 否则打包不会按项目划分目录
+  ...projectsConfig[projectName],
+}
+```
+这里环境变量需要是VUE_APP_XXX形式, 因为vue-admin模板基于vue-cli开发, 而vue-cli对环境变量设置做了如下规定, 具体可参看文档[vue-cli环境变量](https://cli.vuejs.org/zh/guide/mode-and-env.html#%E7%8E%AF%E5%A2%83%E5%8F%98%E9%87%8F)
+
+> 请注意，只有 NODE_ENV，BASE_URL 和以 VUE_APP_ 开头的变量将通过 webpack.DefinePlugin
+> 静态地嵌入到客户端侧的代码中。这是为了避免意外公开机器上可能具有相同名称的私钥。
+> 
+意思就是说vuecli项目里的用户环境变量名必须加上VUE_APP_前缀, 否则在项目里获取不到
+
+**5, 修改 /package.json**
+
+```javascript
+"scripts": {
+    "dev": "vue-cli-service serve",
+    "dev:test-app": "cross-env VUE_APP_PROJECT_NAME=test-app vue-cli-service serve --open",
+    "build:test-app": "cross-env VUE_APP_PROJECT_NAME=test-app vue-cli-service build",
+  },
+```
+需要安装 cross-env
+npm i --save-dev cross-env
+
+**6, 运行**
+运行根项目: `npm run serve`
+运行子项目: `npm run dev:test-app`
+
+##  使用
+以上是多项目集成项目搭建流程, 下面是项目使用
+## 运行
 
 ```bash
-# clone the project
-git clone https://github.com/PanJiaChen/vue-admin-template.git
-
-# enter the project directory
-cd vue-admin-template
-
 # install dependency
 npm install
 
-# develop
-npm run dev
+# 运行对应项目, 以oem-app为例
+npm run dev:oem-app
+
 ```
 
-This will automatically open http://localhost:9528
 
-## Build
+## 打包
 
 ```bash
-# build for test environment
-npm run build:stage
-
-# build for production environment
-npm run build:prod
+# 打包对应项目, 以oem-app为例
+npm run build:oem-app
 ```
 
-## Advanced
+### 配置
+
+#### 新增子项目:
 
 ```bash
-# preview the release environment effect
-npm run preview
 
-# preview the release environment effect + static resource analysis
-npm run preview -- --report
+/src/apps 下新建xxx-app文件夹, 此处放入项目代码文件夹, 增加index.html和xxx-app.html, 两文件内容相同
 
-# code format check
-npm run lint
+/projects.js
+const config = {
+    ...
+    'xxx-app':{
+    pages: {
+      index: {
+        entry: "src/apps/xxx-app/main.js",
+        template: "src/apps/xxx-app/index.html",
+        filename: "index.html"
+      }
+    },
+    outputDir: "dist/xxx-app/"
+  },
+    ...
+}
 
-# code format check and auto fix
-npm run lint -- --fix
+/vue.config.js
+configureWebpack.resolve.alias处为不同子项目配置快捷路径
+
+/.env.development /.env.production 处为不同子项目设置环境变量VUE_APP_BASE_API
+VUE_APP_BASE_API_xxx-app = '/your_url'
+此环境变量调用方式为: process.env[`VUE_APP_BASE_API_${process.env.VUE_APP_PROJECT_NAME}`]
+
+
 ```
-
-Refer to [Documentation](https://panjiachen.github.io/vue-element-admin-site/guide/essentials/deploy.html) for more information
-
-## Demo
-
-![demo](https://github.com/PanJiaChen/PanJiaChen.github.io/blob/master/images/demo.gif)
-
-## Extra
-
-If you want router permission && generate menu by user roles , you can use this branch [permission-control](https://github.com/PanJiaChen/vue-admin-template/tree/permission-control)
-
-For `typescript` version, you can use [vue-typescript-admin-template](https://github.com/Armour/vue-typescript-admin-template) (Credits: [@Armour](https://github.com/Armour))
-
-## Related Project
-
-- [vue-element-admin](https://github.com/PanJiaChen/vue-element-admin)
-
-- [electron-vue-admin](https://github.com/PanJiaChen/electron-vue-admin)
-
-- [vue-typescript-admin-template](https://github.com/Armour/vue-typescript-admin-template)
-
-- [awesome-project](https://github.com/PanJiaChen/vue-element-admin/issues/2312)
-
-## Browsers support
-
-Modern browsers and Internet Explorer 10+.
-
-| [<img src="https://raw.githubusercontent.com/alrra/browser-logos/master/src/edge/edge_48x48.png" alt="IE / Edge" width="24px" height="24px" />](http://godban.github.io/browsers-support-badges/)</br>IE / Edge | [<img src="https://raw.githubusercontent.com/alrra/browser-logos/master/src/firefox/firefox_48x48.png" alt="Firefox" width="24px" height="24px" />](http://godban.github.io/browsers-support-badges/)</br>Firefox | [<img src="https://raw.githubusercontent.com/alrra/browser-logos/master/src/chrome/chrome_48x48.png" alt="Chrome" width="24px" height="24px" />](http://godban.github.io/browsers-support-badges/)</br>Chrome | [<img src="https://raw.githubusercontent.com/alrra/browser-logos/master/src/safari/safari_48x48.png" alt="Safari" width="24px" height="24px" />](http://godban.github.io/browsers-support-badges/)</br>Safari |
-| --------- | --------- | --------- | --------- |
-| IE10, IE11, Edge| last 2 versions| last 2 versions| last 2 versions
-
-## License
-
-[MIT](https://github.com/PanJiaChen/vue-admin-template/blob/master/LICENSE) license.
-
-Copyright (c) 2017-present PanJiaChen
