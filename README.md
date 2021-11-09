@@ -130,7 +130,7 @@ npm i --save-dev cross-env
 
 ##  使用
 以上是多项目集成项目搭建流程, 下面是项目使用
-## 运行
+### 运行
 
 ```bash
 # install dependency
@@ -142,7 +142,7 @@ npm run dev:oem-app
 ```
 
 
-## 打包
+### 打包
 
 ```bash
 # 打包对应项目, 以oem-app为例
