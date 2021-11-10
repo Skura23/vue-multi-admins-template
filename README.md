@@ -1,3 +1,8 @@
+## 描述
+本代码库是基于vue-element-admin的多项目集成模板, 用于多个前端子项目统一在一个公共根项目之下开发, 每个子项目可独立运行, 又能共享样式、组件等前端资源
+
+本文介绍了此模板的搭建方法和使用, 
+
 ## 太长不看
 clone本代码库, main分支为基于vue-admin-template的模板, br1分支为基于vue-element-admin的模板, 根据需要clone
 
@@ -27,6 +32,7 @@ npm install
 npm run dev
 
 **2, 创建子项目**
+
 直接复制根项目`src`文件夹内容到子项目内, 再在子项目目录内添加`index.html`和`test-app.html`, 两文件内容相同, 内容可直接从`public/index.html`里复制, 前者是单个子项目运行打包时的页面入口, 后者是根项目运行打包时的页面入口
 
 **3, 根目录下添加 /projects.js**
@@ -152,10 +158,13 @@ configureWebpack: {
   },
 ```
 需要安装 cross-env
+
 npm i --save-dev cross-env
 
 **6, 运行**
+
 运行根项目: `npm run serve`
+
 运行子项目: `npm run dev:test-app`
 
 ##  <span id="usage">使用</span>
@@ -214,3 +223,5 @@ VUE_APP_BASE_API_xxx-app = '/your_url'
 
 
 ```
+
+参考: https://leftfist.blog.csdn.net/article/details/118160242
