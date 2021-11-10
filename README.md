@@ -1,5 +1,7 @@
 ## 太长不看
-我把多项目集成模板上传到了github [vue-multi-admins-template](https://github.com/Skura23/vue-multi-admins-template), 使用方法在到文章最后
+clone本代码库, main分支为基于vue-admin-template的模板, br1分支为基于vue-element-admin的模板, 根据需要clone
+
+使用方法在文档最后[使用](#usage)
 
 ## 需求
 vue多个项目开发时, 存在项目内资源共用的问题, 解决方案一般有两个,
@@ -104,10 +106,15 @@ let projectName = (!process.env.VUE_APP_PROJECT_NAME || process.env.VUE_APP_PROJ
  ? 'all' : process.env.VUE_APP_PROJECT_NAME;
  
 module.exports = {
-  // 注意, 需注释掉config.plugin('preload')配置项, 否则运行会报错
   // 注意, 此句要放在outputDir: 'dist'配置项后面以将其覆盖, 否则打包不会按项目划分目录
   ...projectsConfig[projectName],
+  
+  // 注意, 需注释掉config.plugin('preload')配置项, 否则运行会报错
+  // 注意, 注释掉config.plugin('ScriptExtHtmlWebpackPlugin')那段代码, 否则打包后项目会有部分打包文件的报错信息, 参考: https://github.com/PanJiaChen/vue-admin-template/issues/593
 }
+
+
+
 ```
 这里环境变量需要是VUE_APP_XXX形式, 因为vue-admin模板基于vue-cli开发, 而vue-cli对环境变量设置做了如下规定, 具体可参看文档[vue-cli环境变量](https://cli.vuejs.org/zh/guide/mode-and-env.html#%E7%8E%AF%E5%A2%83%E5%8F%98%E9%87%8F)
 
@@ -115,6 +122,25 @@ module.exports = {
 > 静态地嵌入到客户端侧的代码中。这是为了避免意外公开机器上可能具有相同名称的私钥。
 > 
 意思就是说vuecli项目里的用户环境变量名必须加上VUE_APP_前缀, 否则在项目里获取不到
+
+
+
+然后为子项目配置快捷路径, 在子项目文件里全局替换`@/`路径为`@test/`路径
+```javascript
+configureWebpack: {
+    // provide the app's title in webpack's name field, so that
+    // it can be accessed in index.html to inject the correct title.
+    name: name,
+    resolve: {
+      alias: {
+        '@': resolve('src'),
+        '@test': resolve('src/apps/test-app')
+      },
+    }
+  },
+
+```
+
 
 **5, 修改 /package.json**
 
@@ -132,16 +158,18 @@ npm i --save-dev cross-env
 运行根项目: `npm run serve`
 运行子项目: `npm run dev:test-app`
 
-##  使用
+##  <span id="usage">使用</span>
 以上是多项目集成项目搭建流程, 下面是项目使用
 ### 运行
 
 ```bash
+git clone git@github.com:Skura23/vue-multi-admins-template.git
+
 # install dependency
 npm install
 
-# 运行对应项目, 以oem-app为例
-npm run dev:oem-app
+# 运行对应项目, 以test-app为例
+npm run dev:test-app
 
 ```
 
@@ -149,8 +177,8 @@ npm run dev:oem-app
 ### 打包
 
 ```bash
-# 打包对应项目, 以oem-app为例
-npm run build:oem-app
+# 打包对应项目, 以test-app为例
+npm run build:test-app
 ```
 
 ### 配置
